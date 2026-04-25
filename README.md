@@ -34,18 +34,19 @@ The project is designed for a personal meal-planning use case, but the architect
 
 ```text
 .
-├── index.html              # Static frontend chat UI
-├── lambda_function.py      # AWS Lambda entrypoint
-├── agent.py                # Bedrock Converse agent loop
-├── tools.py                # Tool schemas and dispatch logic
-├── system_prompt.py        # System prompt for the meal-planning assistant
-├── db.py                   # DynamoDB data access layer
-├── spoonacular.py          # Spoonacular API client
-├── kroger.py               # Kroger Public API client
-├── packages.py             # Grocery package-size lookup and fallback catalog
-├── obs.py                  # Structured logging helper
-├── seed_recipes.py         # Optional recipe-cache seeding script
-└── requirements.txt        # Python dependencies
+├── index.html                      # Static frontend chat UI
+└── lambda/
+    ├── lambda_function.py          # AWS Lambda entrypoint
+    ├── agent.py                    # Bedrock Converse agent loop
+    ├── tools.py                    # Tool schemas and dispatch logic
+    ├── system_prompt.py            # System prompt for the meal-planning assistant
+    ├── db.py                       # DynamoDB data access layer
+    ├── spoonacular.py              # Spoonacular API client
+    ├── kroger.py                   # Kroger Public API client
+    ├── packages.py                 # Grocery package-size lookup and fallback catalog
+    ├── obs.py                      # Structured logging helper
+    ├── seed_recipes.py             # Optional recipe-cache seeding script
+    └── requirements.txt            # Python dependencies
 ```
 
 ---
@@ -295,19 +296,43 @@ Handler:
 lambda_function.lambda_handler
 ```
 
-Package and upload the backend files:
+Package and upload the backend files from the `lambda/` folder:
 
 ```text
-agent.py
-db.py
-kroger.py
-lambda_function.py
-obs.py
-packages.py
-spoonacular.py
-system_prompt.py
-tools.py
-requirements.txt
+lambda/
+├── agent.py
+├── db.py
+├── kroger.py
+├── lambda_function.py
+├── obs.py
+├── packages.py
+├── spoonacular.py
+├── system_prompt.py
+├── tools.py
+├── seed_recipes.py
+└── requirements.txt
+```
+
+From the project root, run:
+
+```bash
+cd lambda
+rm -rf build grocery-agent.zip
+mkdir build
+
+cp *.py build/
+
+pip install --target build/ -r requirements.txt
+
+cd build
+zip -r ../grocery-agent.zip .
+cd ..
+```
+
+Then upload the generated deployment package to AWS Lambda:
+
+```text
+lambda/grocery-agent.zip
 ```
 
 Make sure the Lambda package or layer includes:
@@ -529,5 +554,3 @@ This project uses or was influenced by the following external services, framewor
 - `boto3` for AWS SDK access from Python
 - `requests` for HTTP API calls
 - Google Fonts used by the frontend styling
-
-No code should be shared across teams, and any starter code, external libraries, or public API documentation used for the project should be acknowledged here.
