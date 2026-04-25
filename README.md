@@ -209,9 +209,9 @@ For Lambda deployment, package these dependencies with the backend code or provi
 | Variable | Required? | Description |
 |---|---:|---|
 | `APP_TOKEN` | Optional | Shared secret required in the `x-app-token` request header. If unset, token checking is skipped. |
-| `MODEL_ID` | Optional | Bedrock model ID. Defaults to `anthropic.claude-3-5-sonnet-20241022-v2:0`. |
-| `MAX_AGENT_TURNS` | Optional | Max tool-calling turns before stopping. Defaults to `10`. |
-| `MAX_OUTPUT_TOKENS` | Optional | Max output tokens for Bedrock response. Defaults to `2000`. |
+| `MODEL_ID` | Optional | Bedrock model ID. Defaults to `us.anthropic.claude-sonnet-4-6`. |
+| `MAX_AGENT_TURNS` | Optional | Max tool-calling turns before stopping. Defaults to `24`. |
+| `MAX_OUTPUT_TOKENS` | Optional | Max output tokens for Bedrock response. Defaults to `10000`. |
 | `TEMPERATURE` | Optional | Model temperature. Defaults to `0.7`. |
 
 ### Frontend Configuration
