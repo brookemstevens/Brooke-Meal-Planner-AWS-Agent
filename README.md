@@ -326,10 +326,8 @@ Example:
 ```bash
 AWS_REGION=us-east-2
 TABLE_NAME=grocery-agent
-MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
-MAX_AGENT_TURNS=10
-MAX_OUTPUT_TOKENS=2000
-TEMPERATURE=0.7
+MODEL_ID=us.anthropic.claude-sonnet-4-6
+MAX_AGENT_TURNS=24
 
 SPOONACULAR_API_KEY=your_spoonacular_key
 KROGER_CLIENT_ID=your_kroger_client_id
