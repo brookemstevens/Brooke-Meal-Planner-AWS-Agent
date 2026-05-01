@@ -194,7 +194,7 @@ def save_history(user_id: str, messages: list[dict], cap: int = 30) -> None:
 
 def add_disliked_recipe(
     user_id: str,
-    recipe_id: int,
+    recipe_id: str,
     title: str | None = None,
     reason: str | None = None,
 ) -> None:
@@ -213,7 +213,7 @@ def add_disliked_recipe(
     )
 
 
-def remove_disliked_recipe(user_id: str, recipe_id: int) -> None:
+def remove_disliked_recipe(user_id: str, recipe_id: str) -> None:
     _table.delete_item(
         Key={"pk": _pk(user_id), "sk": f"DISLIKED#{recipe_id}"}
     )
@@ -221,7 +221,7 @@ def remove_disliked_recipe(user_id: str, recipe_id: int) -> None:
 
 def get_disliked_recipes(user_id: str) -> list[dict]:
     """Return all disliked recipes for the user as a list of dicts with
-    recipe_id, title (if stored), and reason (if stored).
+    recipe_id (string), title (if stored), and reason (if stored).
     """
     resp = _table.query(
         KeyConditionExpression=Key("pk").eq(_pk(user_id))
@@ -229,17 +229,15 @@ def get_disliked_recipes(user_id: str) -> list[dict]:
     )
     items = []
     for row in resp.get("Items", []):
-        rid_str = row["sk"].replace("DISLIKED#", "", 1)
-        try:
-            rid = int(rid_str)
-        except ValueError:
-            continue
+        rid = row["sk"].replace("DISLIKED#", "", 1)
         items.append({"recipe_id": rid, **row.get("data", {})})
     return items
 
 
-def get_disliked_recipe_ids(user_id: str) -> set[int]:
-    """Faster path when we only need the set of IDs (for filtering)."""
+def get_disliked_recipe_ids(user_id: str) -> set[str]:
+    """Faster path when we only need the set of IDs (for filtering).
+    Returns string IDs — callers comparing against Spoonacular results
+    must stringify the search-result IDs before doing `in` checks."""
     return {row["recipe_id"] for row in get_disliked_recipes(user_id)}
 
 
@@ -253,7 +251,7 @@ def get_disliked_recipe_ids(user_id: str) -> set[int]:
 # boto3 resource returns numbers as Decimal, which isn't JSON-serializable
 # without extra plumbing. JSON-in, JSON-out sidesteps the whole issue.
 
-def get_cached_recipe(recipe_id: int) -> dict | None:
+def get_cached_recipe(recipe_id: str) -> dict | None:
     """Return the cached recipe dict, or None if not cached."""
     resp = _table.get_item(Key={"pk": "CACHE", "sk": f"RECIPE#{recipe_id}"})
     raw = resp.get("Item", {}).get("recipe_json")
@@ -262,7 +260,7 @@ def get_cached_recipe(recipe_id: int) -> dict | None:
     return json.loads(raw)
 
 
-def save_cached_recipe(recipe_id: int, recipe: dict) -> None:
+def save_cached_recipe(recipe_id: str, recipe: dict) -> None:
     """Store the slimmed recipe dict in the cache."""
     _table.put_item(
         Item={
