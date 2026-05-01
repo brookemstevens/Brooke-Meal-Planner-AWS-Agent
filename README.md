@@ -1,4 +1,4 @@
-# Brooke's Meal Planner
+# Brooke's Meal Planner AWS Agent
 
 A personal AI dinner-planning assistant that helps a single person plan realistic weeknight meals, reduce food waste, and generate grocery lists with real package sizes and store-specific prices.
 
