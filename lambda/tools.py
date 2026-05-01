@@ -239,7 +239,10 @@ TOOLS = [
                 "json": {
                     "type": "object",
                     "properties": {
-                        "recipe_id": {"type": "integer"}
+                        "recipe_id": {
+                            "type": "string",
+                            "description": "Recipe ID. Spoonacular IDs come back as integers in search results — pass them as strings here (e.g. '649030'). Custom-cookbook recipes use prefixed IDs like 'cookbook_carbonara'.",
+                        }
                     },
                     "required": ["recipe_id"],
                 }
@@ -298,17 +301,19 @@ TOOLS = [
                 "Record that the user disliked a recipe so it won't be "
                 "suggested again. Call this when the user reacts negatively "
                 "to a recipe you suggested, or when they mention having tried "
-                "something they didn't enjoy. The recipe_id must be a "
-                "Spoonacular ID from a previous search result or recipe "
-                "details call. Optional reason is free text (e.g. 'too bland', "
-                "'too much work', 'didn't like the texture') — include it when "
-                "the user gives a reason so the agent can learn patterns."
+                "something they didn't enjoy. The recipe_id must come from a "
+                "previous search result or recipe details call (Spoonacular "
+                "integer IDs passed as strings, or 'cookbook_*' IDs for "
+                "user-added recipes). Optional reason is free text (e.g. "
+                "'too bland', 'too much work', 'didn't like the texture') — "
+                "include it when the user gives a reason so the agent can "
+                "learn patterns."
             ),
             "inputSchema": {
                 "json": {
                     "type": "object",
                     "properties": {
-                        "recipe_id": {"type": "integer"},
+                        "recipe_id": {"type": "string"},
                         "title": {
                             "type": "string",
                             "description": "Recipe title, for easy reference later.",
@@ -333,7 +338,7 @@ TOOLS = [
             "inputSchema": {
                 "json": {
                     "type": "object",
-                    "properties": {"recipe_id": {"type": "integer"}},
+                    "properties": {"recipe_id": {"type": "string"}},
                     "required": ["recipe_id"],
                 }
             },
@@ -480,9 +485,18 @@ TOOLS = [
 # Response slimming
 # ---------------------------------------------------------------------------
 
+def _stringify_id(rid) -> str | None:
+    """Spoonacular returns IDs as integers; we standardize on strings everywhere
+    so they can coexist with custom 'cookbook_*' IDs and so disliked-set
+    membership checks aren't tripped by int/str mismatches."""
+    if rid is None:
+        return None
+    return str(rid)
+
+
 def _slim_ingredient_search_result(r: dict) -> dict:
     return {
-        "id": r.get("id"),
+        "id": _stringify_id(r.get("id")),
         "title": r.get("title"),
         "used_ingredients": [i.get("name") for i in r.get("usedIngredients", [])],
         "missed_ingredients": [i.get("name") for i in r.get("missedIngredients", [])],
@@ -493,7 +507,7 @@ def _slim_ingredient_search_result(r: dict) -> dict:
 
 def _slim_complex_search_result(r: dict) -> dict:
     out = {
-        "id": r.get("id"),
+        "id": _stringify_id(r.get("id")),
         "title": r.get("title"),
         "ready_in_minutes": r.get("readyInMinutes"),
         "servings": r.get("servings"),
@@ -508,7 +522,7 @@ def _slim_complex_search_result(r: dict) -> dict:
 
 def _slim_recipe_details(r: dict) -> dict:
     return {
-        "id": r.get("id"),
+        "id": _stringify_id(r.get("id")),
         "title": r.get("title"),
         "ready_in_minutes": r.get("readyInMinutes"),
         "servings": r.get("servings"),
@@ -600,7 +614,7 @@ def dispatch_tool(name: str, inp: dict, user_id: str) -> dict[str, Any]:
         }
 
     if name == "get_recipe_details":
-        recipe_id = inp["recipe_id"]
+        recipe_id = str(inp["recipe_id"])
 
         # Cache check first. Recipe content never changes, so cached data
         # is always valid. Zero API points, ~10ms DynamoDB read.
@@ -609,7 +623,19 @@ def dispatch_tool(name: str, inp: dict, user_id: str) -> dict[str, Any]:
             cached["_cached"] = True  # lets observability distinguish hits
             return cached
 
-        # Cache miss — hit Spoonacular and store the slimmed result.
+        # Custom IDs (anything non-numeric, like 'cookbook_*') never come
+        # from Spoonacular — there's no fallback to fetch them. If they
+        # aren't in cache, they don't exist.
+        if not recipe_id.isdigit():
+            return {
+                "error": (
+                    f"Recipe '{recipe_id}' not found in cache. Custom "
+                    "(non-Spoonacular) recipes must be seeded into the "
+                    "cache directly; they cannot be fetched from any API."
+                )
+            }
+
+        # Cache miss with a numeric (Spoonacular) ID — hit the API.
         try:
             r = get_recipe(recipe_id)
         except SpoonacularError as e:
@@ -631,17 +657,19 @@ def dispatch_tool(name: str, inp: dict, user_id: str) -> dict[str, Any]:
         return {"plan": get_meal_plan(user_id, inp["week_start"])}
 
     if name == "mark_recipe_disliked":
+        rid = str(inp["recipe_id"])
         add_disliked_recipe(
             user_id,
-            inp["recipe_id"],
+            rid,
             title=inp.get("title"),
             reason=inp.get("reason"),
         )
-        return {"status": "ok", "recipe_id": inp["recipe_id"]}
+        return {"status": "ok", "recipe_id": rid}
 
     if name == "unmark_recipe_disliked":
-        remove_disliked_recipe(user_id, inp["recipe_id"])
-        return {"status": "ok", "recipe_id": inp["recipe_id"]}
+        rid = str(inp["recipe_id"])
+        remove_disliked_recipe(user_id, rid)
+        return {"status": "ok", "recipe_id": rid}
 
     if name == "get_disliked_recipes":
         return {"disliked": get_disliked_recipes(user_id)}
