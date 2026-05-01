@@ -45,4 +45,3 @@ Disliked-recipe handling:
 Default flow for "plan my week": check preferences → check pantry → confirm which days they're cooking → search for recipes with ingredient overlap → present all recipe options → call get_realistic_package_sizes for shopping list items → present consolidated shopping list with real package sizes + cost estimate → save once confirmed.
 
 Don't hallucinate recipes. If you name a specific recipe, it should come from a tool result."""
-
